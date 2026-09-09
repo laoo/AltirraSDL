@@ -35,6 +35,8 @@
 
 #include "ui_main.h"
 #include "ui_menus_internal.h"
+#include "ui_altview.h"
+#include <at/atcore/devicevideo.h>
 #include "ui_debugger.h"
 #include "ui_textselection.h"
 #include "display_backend.h"
@@ -767,6 +769,29 @@ static void BuildViewMenu(NSMenu *menu) {
 		AddItem(voMenu, @"1 Computer Output", !altView, true, [=]{
 			ATUISetAltViewEnabled(false);
 		});
+		if (IATDeviceVideoManager *vidMgr = ATUIAltViewGetVideoManager()) {
+			const uint32 n = vidMgr->GetOutputCount();
+			const sint32 selIdx = ATUIGetCurrentAltViewIndex();
+
+			for(uint32 i = 0; i < n; ++i) {
+				IATDeviceVideoOutput *output = vidMgr->GetOutput(i);
+				if (!output)
+					continue;
+
+				const VDStringA name = VDTextWToU8(VDStringSpanW(output->GetDisplayName()));
+				VDStringA label;
+
+				if (i < 9)
+					label.sprintf("%d %s", (int)((i + 2) % 10), name.c_str());
+				else
+					label = name;
+
+				AddItem(voMenu, [NSString stringWithUTF8String:label.c_str()], (sint32)i == selIdx, true, [=]{
+					ATUISetAltViewByIndex((sint32)i);
+				});
+			}
+		}
+		AddSeparator(voMenu);
 		if (ATUIIsAltOutputAvailable()) {
 			AddItem(voMenu, @"Next Output", false, true, [=]{
 				ATUISelectNextAltOutput();

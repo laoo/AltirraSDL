@@ -5,6 +5,12 @@
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
       <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
+    <Filter Include="Source Files\mariacel">
+      <UniqueIdentifier>{7F3C1B2A-5D64-4C1E-9A0B-2E6F8C1D4A71}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\mariacel">
+      <UniqueIdentifier>{3A9E6D4C-1B7F-4E2A-8C5D-6F0A9B3E2C18}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Header Files">
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
@@ -961,6 +967,45 @@
     <ClCompile Include="source\1400xl.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="source\maria.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\mariacel\mcel_bus.cpp">
+      <Filter>Source Files\mariacel</Filter>
+    </ClCompile>
+    <ClCompile Include="source\mariacel\mcel_collide.cpp">
+      <Filter>Source Files\mariacel</Filter>
+    </ClCompile>
+    <ClCompile Include="source\mariacel\mcel_derived.cpp">
+      <Filter>Source Files\mariacel</Filter>
+    </ClCompile>
+    <ClCompile Include="source\mariacel\mcel_helpers.cpp">
+      <Filter>Source Files\mariacel</Filter>
+    </ClCompile>
+    <ClCompile Include="source\mariacel\mcel_prologue.cpp">
+      <Filter>Source Files\mariacel</Filter>
+    </ClCompile>
+    <ClCompile Include="source\mariacel\mcel_ranges.cpp">
+      <Filter>Source Files\mariacel</Filter>
+    </ClCompile>
+    <ClCompile Include="source\mariacel\mcel_raster.cpp">
+      <Filter>Source Files\mariacel</Filter>
+    </ClCompile>
+    <ClCompile Include="source\mariacel\mcel_rle.cpp">
+      <Filter>Source Files\mariacel</Filter>
+    </ClCompile>
+    <ClCompile Include="source\mariacel\mcel_sdram.cpp">
+      <Filter>Source Files\mariacel</Filter>
+    </ClCompile>
+    <ClCompile Include="source\mariacel\mcel_span.cpp">
+      <Filter>Source Files\mariacel</Filter>
+    </ClCompile>
+    <ClCompile Include="source\mariacel\mcel_stats.cpp">
+      <Filter>Source Files\mariacel</Filter>
+    </ClCompile>
+    <ClCompile Include="source\mariacel\mcel_video.cpp">
+      <Filter>Source Files\mariacel</Filter>
+    </ClCompile>
     <ClCompile Include="source\1450xld.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -1775,6 +1820,48 @@
     </ClInclude>
     <ClInclude Include="h\1400xl.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="h\maria.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\mariacel\mcel.h">
+      <Filter>Header Files\mariacel</Filter>
+    </ClInclude>
+    <ClInclude Include="source\mariacel\mcel_derived.h">
+      <Filter>Header Files\mariacel</Filter>
+    </ClInclude>
+    <ClInclude Include="source\mariacel\mcel_fixed.h">
+      <Filter>Header Files\mariacel</Filter>
+    </ClInclude>
+    <ClInclude Include="source\mariacel\mcel_helpers.h">
+      <Filter>Header Files\mariacel</Filter>
+    </ClInclude>
+    <ClInclude Include="source\mariacel\mcel_ranges.h">
+      <Filter>Header Files\mariacel</Filter>
+    </ClInclude>
+    <ClInclude Include="source\mariacel\mcel_regs.h">
+      <Filter>Header Files\mariacel</Filter>
+    </ClInclude>
+    <ClInclude Include="source\mariacel\mcel_report.h">
+      <Filter>Header Files\mariacel</Filter>
+    </ClInclude>
+    <ClInclude Include="source\mariacel\mcel_rle.h">
+      <Filter>Header Files\mariacel</Filter>
+    </ClInclude>
+    <ClInclude Include="source\mariacel\mcel_sdram.h">
+      <Filter>Header Files\mariacel</Filter>
+    </ClInclude>
+    <ClInclude Include="source\mariacel\mcel_sintab.h">
+      <Filter>Header Files\mariacel</Filter>
+    </ClInclude>
+    <ClInclude Include="source\mariacel\mcel_span.h">
+      <Filter>Header Files\mariacel</Filter>
+    </ClInclude>
+    <ClInclude Include="source\mariacel\mcel_video.h">
+      <Filter>Header Files\mariacel</Filter>
+    </ClInclude>
+    <ClInclude Include="source\mariacel\mcel_window.h">
+      <Filter>Header Files\mariacel</Filter>
     </ClInclude>
     <ClInclude Include="h\1450xld.h">
       <Filter>Header Files</Filter>

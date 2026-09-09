@@ -56,6 +56,20 @@
     <ClInclude Include="h\1030full.h" />
     <ClInclude Include="h\1090.h" />
     <ClInclude Include="h\1400xl.h" />
+    <ClInclude Include="h\maria.h" />
+    <ClInclude Include="source\mariacel\mcel.h" />
+    <ClInclude Include="source\mariacel\mcel_derived.h" />
+    <ClInclude Include="source\mariacel\mcel_fixed.h" />
+    <ClInclude Include="source\mariacel\mcel_helpers.h" />
+    <ClInclude Include="source\mariacel\mcel_ranges.h" />
+    <ClInclude Include="source\mariacel\mcel_regs.h" />
+    <ClInclude Include="source\mariacel\mcel_report.h" />
+    <ClInclude Include="source\mariacel\mcel_rle.h" />
+    <ClInclude Include="source\mariacel\mcel_sdram.h" />
+    <ClInclude Include="source\mariacel\mcel_sintab.h" />
+    <ClInclude Include="source\mariacel\mcel_span.h" />
+    <ClInclude Include="source\mariacel\mcel_video.h" />
+    <ClInclude Include="source\mariacel\mcel_window.h" />
     <ClInclude Include="h\1450xld.h" />
     <ClInclude Include="h\820full.h" />
     <ClInclude Include="h\850full.h" />
@@ -139,6 +153,43 @@
     <ClCompile Include="source\1030full.cpp" />
     <ClCompile Include="source\1090.cpp" />
     <ClCompile Include="source\1400xl.cpp" />
+    <ClCompile Include="source\maria.cpp" />
+    <ClCompile Include="source\mariacel\mcel_bus.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="source\mariacel\mcel_collide.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="source\mariacel\mcel_derived.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="source\mariacel\mcel_helpers.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="source\mariacel\mcel_prologue.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="source\mariacel\mcel_ranges.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="source\mariacel\mcel_raster.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="source\mariacel\mcel_rle.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="source\mariacel\mcel_sdram.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="source\mariacel\mcel_span.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="source\mariacel\mcel_stats.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="source\mariacel\mcel_video.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="source\1450xld.cpp" />
     <ClCompile Include="source\820full.cpp" />
     <ClCompile Include="source\850full.cpp" />

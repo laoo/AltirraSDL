@@ -812,7 +812,15 @@ static const ATUICommand kSDL3CommandsExtra[] = {
 	{ "View.PanZoomTool",
 		[] { ATUIActivatePanZoomTool(); } },
 	{ "View.VideoOutputNormal",
-		[] { ATUISetAltViewEnabled(false); } },
+		[] { ATUISetAltViewEnabled(false); }, nullptr, [] { return ToRadioChecked(!ATUIGetAltViewEnabled()); } },
+	{ "View.VideoOutputPrev",
+		[] { ATUISelectPrevAltOutput(); }, ATUIIsAltOutputAvailable },
+	{ "View.VideoOutputNext",
+		[] { ATUISelectNextAltOutput(); }, ATUIIsAltOutputAvailable },
+	{ "View.ToggleVideoOutputAutoswitching",
+		[] { ATUISetAltViewAutoswitchingEnabled(!ATUIGetAltViewAutoswitchingEnabled()); }, ATUIIsAltOutputAvailable, [] { return ToChecked(ATUIGetAltViewAutoswitchingEnabled()); } },
+	{ "View.ToggleXEP80ViewAutoswitching",
+		[] { ATUISetAltViewAutoswitchingEnabled(!ATUIGetAltViewAutoswitchingEnabled()); }, ATUIIsAltOutputAvailable, [] { return ToChecked(ATUIGetAltViewAutoswitchingEnabled()); } },
 
 	// =====================================================================
 	// Video (cmdsystem.cpp) — quick-bar and command-palette display modes.

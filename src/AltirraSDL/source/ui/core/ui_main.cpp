@@ -2459,6 +2459,7 @@ void ATUIRenderFrame(ATSimulator &sim, VDVideoDisplaySDL3 &display,
 
 	// Drag-and-drop visual feedback overlay
 	ATUIRenderDragDropOverlay();
+	ATUIRenderAltViewOverlay();
 
 	// Reusable confirmation dialogs — drawn last so they sit above
 	// every other window.  Also re-centers and captures keyboard focus.

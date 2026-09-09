@@ -79,6 +79,7 @@ extern "C" bool ATWasmBrokerIsActive();
 #include "ui_mode.h"
 #include "options.h"
 #include "ui_main.h"
+#include "ui_altview.h"
 #include "ui_autosuggest.h"
 #include "ui_debugger.h"
 #include "debugger.h"   // IATDebugger + ATDebuggerSymbolLoadMode (used in the __EMSCRIPTEN__ startup block below)
@@ -1188,6 +1189,13 @@ static void HandleEvents() {
 	}
 }
 
+// "Video Outputs" alt-view state for the frame being presented. Set by
+// RenderAndPresent() before ComputeDisplayRect() runs so the layout uses
+// the device output's size and pixel aspect ratio instead of GTIA's.
+static bool s_altViewActive = false;
+static ATUIAltViewFrame s_altViewFrame;
+static bool s_lastUploadWasAltView = false;
+
 // =========================================================================
 // Display destination rectangle
 // =========================================================================
@@ -1226,14 +1234,33 @@ static SDL_FRect ComputeDisplayRect() {
 	const auto& gtia = g_sim.GetGTIA();
 	const ATDisplayStretchMode stretchMode = ATUIGetDisplayStretchMode();
 
-	if (stretchMode == kATDisplayStretchMode_PreserveAspectRatio
+	if (s_altViewActive && s_altViewFrame.mbForceExactPixels) {
+		// Device output that wants 1:1 pixels (matches
+		// ATUIVideoDisplayWindow::GetAltDisplayArea() on Windows): native
+		// size when it fits, scaled down otherwise, no zoom.
+		const float rw = (float)std::max(1, s_altViewFrame.mWidth);
+		const float rh = (float)std::max(1, s_altViewFrame.mHeight);
+		const float ratio = std::min(1.0f, std::min(w / rw, h / rh));
+
+		w = rw * ratio;
+		h = rh * ratio;
+	} else if (stretchMode == kATDisplayStretchMode_PreserveAspectRatio
 		|| stretchMode == kATDisplayStretchMode_IntegralPreserveAspectRatio)
 	{
 		int sw = 1, sh = 1;
-		bool rgb32 = false;
-		gtia.GetRawFrameFormat(sw, sh, rgb32);
+		double par = 1.0;
 
-		const float fsw = (float)((double)sw * gtia.GetPixelAspectRatio());
+		if (s_altViewActive) {
+			sw = std::max(1, s_altViewFrame.mWidth);
+			sh = std::max(1, s_altViewFrame.mHeight);
+			par = s_altViewFrame.mPixelAspectRatio;
+		} else {
+			bool rgb32 = false;
+			gtia.GetRawFrameFormat(sw, sh, rgb32);
+			par = gtia.GetPixelAspectRatio();
+		}
+
+		const float fsw = (float)((double)sw * par);
 		const float fsh = (float)sh;
 		float zoom = std::min(w / fsw, h / fsh);
 
@@ -1248,10 +1275,29 @@ static SDL_FRect ComputeDisplayRect() {
 		|| stretchMode == kATDisplayStretchMode_Integral)
 	{
 		int sw = 1, sh = 1;
-		gtia.GetFrameSize(sw, sh);
+		float fsw, fsh;
 
-		const float fsw = (float)sw;
-		const float fsh = (float)sh;
+		if (s_altViewActive) {
+			// Windows treats every device output as a double-rate (2x
+			// horizontal) frame buffer in the square-pixel modes and
+			// halves its width (GetAltDisplayArea(): par = 0.5). That is
+			// right for the 80-column cards, whose frame buffers are at
+			// twice the computer's dot clock, but would halve a native
+			// 320x240 output such as MARIA. Outputs whose own pixel aspect
+			// ratio is not close to a 2x buffer therefore keep square
+			// pixels — a deliberate SDL3 extension of the Windows rule.
+			sw = std::max(1, s_altViewFrame.mWidth);
+			sh = std::max(1, s_altViewFrame.mHeight);
+
+			const float par = s_altViewFrame.mPixelAspectRatio < 0.75 ? 0.5f : 1.0f;
+			fsw = (float)sw * par;
+			fsh = (float)sh;
+		} else {
+			gtia.GetFrameSize(sw, sh);
+
+			fsw = (float)sw;
+			fsh = (float)sh;
+		}
 
 		const float continuousRatio = std::min(w / fsw, h / fsh);
 		const float integerRatio    = std::floor(continuousRatio);
@@ -1371,8 +1417,11 @@ static void SyncScreenFXToBackend() {
 	// PAL artifacting is implemented as an accelerated PAL blend in the
 	// backend, so clearing all screen FX here would silently disable PAL
 	// artifacting only for VBXE.
+	// Device video outputs are drawn as plain images, as on Windows:
+	// GTIA's screen effects (and its PAL blending) do not apply to them.
 	const bool effectsDisabled =
-		(g_uiState.screenEffectsMode == ATUIState::kSFXMode_None);
+		(g_uiState.screenEffectsMode == ATUIState::kSFXMode_None)
+		|| s_altViewActive;
 
 	if (!effectsDisabled && g_pDisplay->HasScreenFX()) {
 		g_pBackend->UpdateScreenFX(g_pDisplay->GetLastScreenFX());
@@ -1384,7 +1433,7 @@ static void SyncScreenFXToBackend() {
 		VDVideoDisplayScreenFXInfo offFX {};
 		offFX.mGamma = 1.0f;
 
-		if (g_pDisplay->HasScreenFX()) {
+		if (!s_altViewActive && g_pDisplay->HasScreenFX()) {
 			const VDVideoDisplayScreenFXInfo& requestedFX = g_pDisplay->GetLastScreenFX();
 			offFX.mPALBlendingOffset = requestedFX.mPALBlendingOffset;
 			offFX.mbSignedRGBEncoding = requestedFX.mbSignedRGBEncoding;
@@ -1408,16 +1457,36 @@ static void RenderAndPresent() {
 
 	g_pBackend->BeginFrame();
 
-	// Upload frame pixels to the backend
-	const void *pixels = g_pDisplay->GetFramePixels();
-	if (pixels && ATMacLeakDebugShouldUpload(g_macLeakNewFrame)) {
-		int pw = g_pDisplay->GetFramePixelWidth();
-		int ph = g_pDisplay->GetFramePixelHeight();
-		int pp = g_pDisplay->GetFramePixelPitch();
-		g_pBackend->UploadFrame(pixels, pw, ph, pp);
-		ATMacLeakDebugOnUpload((size_t)pp * ph);
+	// "Video Outputs": auto-switch to a device output that became active,
+	// then decide what the display shows this frame (matches the alt
+	// output handling of ATUIVideoDisplayWindow on Windows).
+	ATUIAltViewOnFrameTick();
+	s_altViewActive = ATUIAltViewPrepareFrame(s_altViewFrame);
+
+	if (s_altViewActive) {
+		// Device output: upload when its frame buffer changed, or when the
+		// texture still holds the computer's picture.
+		if (s_altViewFrame.mbChanged || !s_lastUploadWasAltView) {
+			g_pBackend->UploadFrame(s_altViewFrame.mpPixels, s_altViewFrame.mWidth, s_altViewFrame.mHeight, s_altViewFrame.mPitch);
+			s_lastUploadWasAltView = true;
+		}
+
+		g_macLeakNewFrame = false;
+	} else {
+		// Upload frame pixels to the backend. After leaving the alt view
+		// the last computer frame is re-uploaded so the texture does not
+		// keep showing the device output.
+		const void *pixels = g_pDisplay->GetFramePixels();
+		if (pixels && (s_lastUploadWasAltView || ATMacLeakDebugShouldUpload(g_macLeakNewFrame))) {
+			int pw = g_pDisplay->GetFramePixelWidth();
+			int ph = g_pDisplay->GetFramePixelHeight();
+			int pp = g_pDisplay->GetFramePixelPitch();
+			g_pBackend->UploadFrame(pixels, pw, ph, pp);
+			ATMacLeakDebugOnUpload((size_t)pp * ph);
+			s_lastUploadWasAltView = false;
+		}
+		g_macLeakNewFrame = false;
 	}
-	g_macLeakNewFrame = false;
 
 	// Update filter mode on texture if setting changed.
 	ATDisplayFilterMode curFilter = ATUIGetDisplayFilterMode();
@@ -1437,7 +1506,9 @@ static void RenderAndPresent() {
 	if (s_diagFrameCount < 5)
 		LOG_INFO("Main", "RenderAndPresent: debuggerOpen=%d hasTex=%d", dbgOpen, hasTex);
 	if (!dbgOpen) {
-		if (hasTex) {
+		// A device output without a valid signal shows a black display
+		// area with a message (drawn by ATUIRenderAltViewOverlay()).
+		if (hasTex && !(s_altViewActive && !s_altViewFrame.mbSignalValid)) {
 			g_displayRect = ComputeDisplayRect();
 			if (s_diagFrameCount < 5)
 				LOG_INFO("Main", "RenderFrame: rect=(%.1f,%.1f,%.1f,%.1f) tex=(%d,%d)", g_displayRect.x, g_displayRect.y, g_displayRect.w, g_displayRect.h,
@@ -2230,6 +2301,11 @@ int main(int argc, char *argv[]) {
 	// mode, virtual keyboard placement) before the profile system runs its
 	// initial ATLoadSettings pass below, so the saved values are restored.
 	ATUIStateSettingsInit();
+
+	// "Video Outputs" alt-view: reset and device-removal hooks. Needs the
+	// simulator's event manager and video manager, both created by
+	// g_sim.Init() above.
+	ATUIAltViewInit();
 
 	// Load default profiles and then restore the last active profile.
 	// Windows does this at main.cpp:3941-3979.  ATSettingsLoadLastProfile()
@@ -3376,6 +3452,7 @@ int main(int argc, char *argv[]) {
 	GameBrowser_Shutdown();
 	ATTestModeShutdown();
 	ATMacMenuBarShutdown();
+	ATUIAltViewShutdown();
 	ATUIShutdown();
 	ATUIStateSettingsShutdown();
 

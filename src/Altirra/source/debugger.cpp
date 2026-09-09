@@ -13102,6 +13102,21 @@ void ATConsoleCmdCustom(ATDebuggerCmdParser& parser) {
 		p->DumpStatus(conout);
 }
 
+void ATConsoleCmdMaria(ATDebuggerCmdParser& parser) {
+	parser >> 0;
+
+	IATDevice *maria = g_sim.GetDeviceManager()->GetDeviceByTag("maria");
+
+	if (!maria) {
+		ATConsoleWrite("MARIA device is not active.\n");
+		return;
+	}
+
+	ATDebuggerConsoleOutput conout;
+	if (auto *p = vdpoly_cast<IATDeviceDiagnostics *>(maria))
+		p->DumpStatus(conout);
+}
+
 void ATConsoleCmdUltimate(ATDebuggerCmdParser& parser) {
 	parser >> 0;
 
@@ -14088,6 +14103,7 @@ void ATDebuggerInitCommands() {
 		{ ".crc",				ATConsoleCmdCRC },
 		{ ".ctc",				ATConsoleCmdCTC },
 		{ ".custom",			ATConsoleCmdCustom },
+		{ ".maria",				ATConsoleCmdMaria },
 		{ ".devices",			ATConsoleCmdDevices },
 		{ ".device_info",		ATConsoleCmdDeviceInfo },
 		{ ".diskdumpsec",		ATConsoleCmdDiskDumpSec },

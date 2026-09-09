@@ -21,6 +21,7 @@
 #include <at/atio/cassetteimage.h>
 #include <at/atio/image.h>
 #include "uiaccessors.h"
+#include "ui_altview.h"
 #include "debugger.h"
 
 extern ATSimulator g_sim;
@@ -217,4 +218,26 @@ void ATUIRenderDragDropOverlay() {
 	fg->AddRect(bgMin, bgMax, borderColor, 4.0f);
 	fg->AddText(ImVec2(labelPos.x + padding.x, labelPos.y + padding.y),
 		IM_COL32(255, 255, 255, 255), target.label);
+}
+
+// =========================================================================
+// "Video Outputs": message over the black display area when the selected
+// device output has no valid signal (matches the bad-signal label of
+// ATUIVideoDisplayWindow on Windows).
+// =========================================================================
+
+void ATUIRenderAltViewOverlay() {
+	char text[128];
+	if (!ATUIAltViewGetBadSignalText(text, sizeof text))
+		return;
+
+	const ImGuiViewport *vp = ImGui::GetMainViewport();
+	ImDrawList *fg = ImGui::GetForegroundDrawList();
+
+	const ImVec2 size = ImGui::CalcTextSize(text);
+	const ImVec2 pos(
+		vp->WorkPos.x + (vp->WorkSize.x - size.x) * 0.5f,
+		vp->WorkPos.y + (vp->WorkSize.y - size.y) * 0.5f);
+
+	fg->AddText(pos, IM_COL32(255, 255, 255, 255), text);
 }

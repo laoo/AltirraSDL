@@ -18,6 +18,9 @@
 #include "constants.h"
 #include "uitypes.h"
 #include "uiaccessors.h"
+#include "ui_altview.h"
+#include <at/atcore/devicevideo.h>
+#include <vd2/system/text.h>
 #include "uikeyboard.h"
 #include "accel_sdl3.h"
 #include "options.h"
@@ -178,11 +181,37 @@ void ATUIRenderViewMenu(ATSimulator &sim, ATUIState &state, SDL_Window *window, 
 	if (ImGui::MenuItem("Show FPS", nullptr, showFPS))
 		ATUISetShowFPS(!showFPS);
 
-	// Video Outputs submenu
+	// Video Outputs submenu (matches menu_default.txt: Computer Output,
+	// the {$videooutputs} device list, then Next Output and Auto-Switch)
 	if (ImGui::BeginMenu("Video Outputs")) {
 		bool altView = ATUIGetAltViewEnabled();
 		if (ImGui::MenuItem("1 Computer Output", nullptr, !altView))
 			ATUISetAltViewEnabled(false);
+
+		if (IATDeviceVideoManager *vidMgr = ATUIAltViewGetVideoManager()) {
+			const uint32 n = vidMgr->GetOutputCount();
+			const sint32 selIdx = ATUIGetCurrentAltViewIndex();
+
+			for(uint32 i = 0; i < n; ++i) {
+				IATDeviceVideoOutput *output = vidMgr->GetOutput(i);
+				if (!output)
+					continue;
+
+				const VDStringA name = VDTextWToU8(VDStringSpanW(output->GetDisplayName()));
+				VDStringA label;
+
+				// Windows numbers the first nine outputs 2..9,0 as accelerators.
+				if (i < 9)
+					label.sprintf("%d %s##vo%u", (int)((i + 2) % 10), name.c_str(), i);
+				else
+					label.sprintf("%s##vo%u", name.c_str(), i);
+
+				if (ImGui::MenuItem(label.c_str(), nullptr, (sint32)i == selIdx))
+					ATUISetAltViewByIndex((sint32)i);
+			}
+		}
+
+		ImGui::Separator();
 
 		if (ATUIIsAltOutputAvailable()) {
 			if (ImGui::MenuItem("Next Output"))

@@ -135,6 +135,12 @@ const ATUIDialogDeviceNew::CategoryEntry ATUIDialogDeviceNew::kCategories[]={
 					L"adds expanded firmware and built-in SpartaDOS X capability."
 			},
 			{
+				"maria", L"MARIA",
+				L"FPGA cartridge on the Parallel Bus Interface with the MariaCEL sprite blitter: 256 sprites with scaling, rotation and affine mapping "
+					L"rendered on a separate 320x240 video output, two 16K RAMMAP windows into 32 MB of SDRAM, and a 256-color palette.\n"
+					L"This emulation covers the blitter, the memory windows and the CEL palette; the remaining modules of the cartridge are not emulated."
+			},
+			{
 				"mio", L"MIO",
 				L"The ICD Multi-I/O (MIO) is a PBI device that adds SCSI hard disk, RAM disk, "
 					L"parallel printer port, and RS-232 serial port functionality.\n"

@@ -11,6 +11,13 @@ file(GLOB ALTIRRA_ALL_SOURCES
     "${CMAKE_SOURCE_DIR}/src/Altirra/source/*.cpp"
 )
 
+# MARIA PBI device: the vendored MariaCEL reference model lives in its own
+# subdirectory (see source/mariacel/README.md) and is part of the core.
+file(GLOB ALTIRRA_MARIACEL_SOURCES
+    "${CMAKE_SOURCE_DIR}/src/Altirra/source/mariacel/*.cpp"
+)
+list(APPEND ALTIRRA_ALL_SOURCES ${ALTIRRA_MARIACEL_SOURCES})
+
 # Filter out Win32 UI, entry point, and platform-specific files
 list(FILTER ALTIRRA_ALL_SOURCES EXCLUDE REGEX ".*/ui[a-zA-Z][^/]*\\.cpp$")
 list(FILTER ALTIRRA_ALL_SOURCES EXCLUDE REGEX ".*_win32\\.cpp$")

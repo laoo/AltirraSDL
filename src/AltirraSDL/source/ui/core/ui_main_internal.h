@@ -41,5 +41,6 @@ extern ATUICompatWarningState g_compatWarningState;
 void ATUIRenderCompatWarning(ATSimulator &sim, ATUIState &state);
 void ATUIRenderExitConfirm(ATSimulator &sim, ATUIState &state);
 void ATUIRenderDragDropOverlay();
+void ATUIRenderAltViewOverlay();
 
 #endif

@@ -383,6 +383,7 @@ extern ATUIDragDropState g_dragDropState;
 
 // Render drag-and-drop overlay (call at end of frame, after all windows)
 void ATUIRenderDragDropOverlay();
+void ATUIRenderAltViewOverlay();
 
 // Exit confirmation — checks for dirty storage and shows discard dialog.
 // Set state.showExitConfirm = true to trigger; the render function handles

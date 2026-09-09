@@ -19,6 +19,8 @@ This prerelease version:
    * Debugger: ln command has options for specific read/write/execute symbol lookups.
    * Debugger: .vbxe_bl now has an option to raise the max blit list length.
    * Devices: Added Karin Maxi Drive.
+   * Devices: Added MARIA PBI cartridge (MariaCEL sprite blitter, RAMMAP windows, CEL palette) with its own video output.
+   * SDL3: Video Outputs menu now lists device video outputs (XEP80, 1090, Bit 3, MARIA) and shows them in the display, with auto-switching as on Windows.
    * Devices: Add Device UI now has a checkbox to show all devices for browsing.
    * Disk: Added option to reinterleave disks to 815 16:1 DD interleave.
    * Display: Added support for rendering to Wide Color Gamut (WCG) displays without HDR support.

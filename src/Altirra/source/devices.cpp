@@ -130,6 +130,7 @@ extern const ATDeviceDefinition g_ATDeviceDefThePill;
 extern const ATDeviceDefinition g_ATDeviceDefMultiplexer;
 extern const ATDeviceDefinition g_ATDeviceDefPipeSerial;
 extern const ATDeviceDefinition g_ATDeviceDefKarinMaxiDrive;
+extern const ATDeviceDefinition g_ATDeviceDefMaria;
 
 void ATRegisterDevices(ATDeviceManager& dm) {
 	static constexpr const ATDeviceDefinition *kDeviceDefs[]={
@@ -240,6 +241,7 @@ void ATRegisterDevices(ATDeviceManager& dm) {
 		&g_ATDeviceDefMultiplexer,
 		&g_ATDeviceDefPipeSerial,
 		&g_ATDeviceDefKarinMaxiDrive,
+		&g_ATDeviceDefMaria,
 	};
 
 	for(const ATDeviceDefinition *def : kDeviceDefs)

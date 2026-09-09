@@ -84,6 +84,7 @@ static const DeviceCatalogEntry kPBIDevices[] = {
 	{ "karinmaxidrive", "Karin Maxi Drive", "PBI disk interface providing access to up to two disk drives." },
 	{ "kmkjzide",       "KMK/JZ IDE v1", "PBI-based hard disk interface for parallel ATA devices." },
 	{ "kmkjzide2",      "KMK/JZ IDE v2 (IDEPlus 2.0)", "PBI-based ATA interface with expanded firmware and SpartaDOS X." },
+	{ "maria",          "MARIA", "FPGA cartridge with the MariaCEL sprite blitter: 256 sprites with scaling, rotation and affine mapping on a separate 320x240 output, RAMMAP windows into 32 MB SDRAM. Blitter, windows and CEL palette are emulated." },
 	{ "mio",            "MIO", "ICD Multi-I/O: SCSI hard disk, RAM disk, printer, and RS-232 via PBI." },
 };
 

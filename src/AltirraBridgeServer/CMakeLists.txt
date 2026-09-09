@@ -39,6 +39,7 @@ add_executable(AltirraBridgeServer
     ${ALTIRRA_SDL_DIR}/stubs/console_stubs.cpp
     ${ALTIRRA_SDL_DIR}/stubs/oshelper_stubs.cpp
     ${ALTIRRA_SDL_DIR}/stubs/uiaccessors_stubs.cpp
+    ${ALTIRRA_SDL_DIR}/stubs/altview_stubs.cpp
     ${ALTIRRA_SDL_DIR}/stubs/win32_stubs.cpp
     ${ALTIRRA_SDL_DIR}/stubs/device_stubs.cpp
 

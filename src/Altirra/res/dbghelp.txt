@@ -1499,6 +1499,15 @@
     Displays the status of a custom device, including global variables and
     thread call stacks.
 
++ .maria       Dump MARIA device status
+
+      .maria
+
+    Displays the status of the MARIA PBI device: blitter CTL/STATUS bits,
+    RAMMAP window mapping, PBIRAMBANK selection, frame sequencing, the
+    prologue and per-strip cycle budgets of the last frame, and any model
+    warnings.
+
 + .devices     List attached devices
 
       .devices
