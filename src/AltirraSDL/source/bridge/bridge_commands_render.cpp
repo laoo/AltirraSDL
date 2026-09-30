@@ -1,7 +1,8 @@
 // AltirraBridge - Phase 4 rendering commands (impl)
 //
-// We pull the last frame from GTIA via GetLastFrameBuffer(), convert
-// to XRGB8888 using Kasumi's VDPixmapBlt, then either:
+// We pull the last frame from GTIA via GetLastFrameBuffer() (or, with
+// output=NAME, from a device video output such as MARIA or XEP80),
+// convert to XRGB8888 using Kasumi's VDPixmapBlt, then either:
 //   - write a PNG to disk (path=...)
 //   - emit the PNG base64-inlined (inline=true, default)
 // RAWSCREEN emits the raw pixel buffer directly (no PNG wrap) for
@@ -19,6 +20,12 @@
 
 #include "simulator.h"
 #include "gtia.h"
+#include "devicemanager.h"
+#include "uiaccessors.h"
+
+#include <at/atcore/devicevideo.h>
+#include <vd2/system/text.h>
+#include <vd2/system/VDString.h>
 
 #include <vd2/Kasumi/pixmap.h>
 #include <vd2/Kasumi/pixmapops.h>
@@ -181,11 +188,23 @@ void EncodePng(const uint32_t* pixels, int w, int h, std::vector<uint8_t>& out) 
 }
 
 // ---------------------------------------------------------------------------
-// Grab the last GTIA frame and convert to an XRGB8888 row-packed buffer.
-// Returns false if no frame is available (e.g. pre-boot, fresh sim).
+// Frame sources. `output=` selects which video output is captured:
+//   computer (default) - the last GTIA frame
+//   display            - the output selected under View > Video Outputs
+//                        (the computer picture when none is selected)
+//   <name>             - a device video output by internal name
+//                        (IATDeviceVideoOutput::GetName(), e.g. "maria",
+//                        "xep80"); see VIDEO_OUTPUTS
 // ---------------------------------------------------------------------------
 
-bool CaptureXrgb(ATSimulator& sim, VDPixmapBuffer& dst) {
+IATDeviceVideoManager* GetVideoManager(ATSimulator& sim) {
+	ATDeviceManager* dm = sim.GetDeviceManager();
+	return dm ? dm->GetService<IATDeviceVideoManager>() : nullptr;
+}
+
+// Grab the last GTIA frame and convert to an XRGB8888 row-packed buffer.
+// Returns false if no frame is available (e.g. pre-boot, fresh sim).
+bool CaptureComputerXrgb(ATSimulator& sim, VDPixmapBuffer& dst) {
 	VDPixmapBuffer srcBuf;
 	VDPixmap src;
 	if (!sim.GetGTIA().GetLastFrameBuffer(srcBuf, src))
@@ -195,6 +214,72 @@ bool CaptureXrgb(ATSimulator& sim, VDPixmapBuffer& dst) {
 
 	dst.init(src.w, src.h, nsVDPixmap::kPixFormat_XRGB8888);
 	VDPixmapBlt(dst, src);
+	return true;
+}
+
+// Resolve `output=` and capture that output as XRGB8888 at its native
+// frame buffer size (no aspect correction, same as the GTIA path). On
+// failure returns false with `error` set (without the command prefix).
+bool CaptureXrgb(ATSimulator& sim, const std::string& outputName,
+	VDPixmapBuffer& dst, std::string& error)
+{
+	std::string name = outputName;
+	if (name == "display") {
+		// "" = the computer output is shown.
+		name = ATUIGetCurrentAltOutputName();
+		if (name.empty())
+			name = "computer";
+	}
+
+	IATDeviceVideoOutput* output = nullptr;
+	if (name != "computer") {
+		IATDeviceVideoManager* vm = GetVideoManager(sim);
+		output = vm ? vm->GetOutputByName(name.c_str()) : nullptr;
+
+		if (!output) {
+			// A selected output whose device was removed: the display
+			// falls back to the computer picture, so does the capture.
+			if (outputName == "display") {
+				name = "computer";
+			} else {
+				error = "unknown video output: " + name + " (available: computer";
+				const uint32 n = vm ? vm->GetOutputCount() : 0;
+				for (uint32 i = 0; i < n; ++i) {
+					if (IATDeviceVideoOutput* o = vm->GetOutput(i)) {
+						error += ", ";
+						error += o->GetName();
+					}
+				}
+				error += ')';
+				return false;
+			}
+		}
+	}
+
+	// An output that passes the computer's signal through shows GTIA.
+	if (output && output->GetVideoInfo().mbSignalPassThrough)
+		output = nullptr;
+
+	if (!output) {
+		if (!CaptureComputerXrgb(sim, dst)) {
+			error = "no frame available yet";
+			return false;
+		}
+		return true;
+	}
+
+	// Apply pending frame buffer changes (the display path does this
+	// before presenting; the output may not be the one shown).
+	output->UpdateFrame();
+
+	const VDPixmap& fb = output->GetFrameBuffer();
+	if (!fb.data || fb.w <= 0 || fb.h <= 0) {
+		error = "video output " + name + " has no frame";
+		return false;
+	}
+
+	dst.init(fb.w, fb.h, nsVDPixmap::kPixFormat_XRGB8888);
+	VDPixmapBlt(dst, fb);
 	return true;
 }
 
@@ -228,32 +313,45 @@ void AppendDimField(std::string& payload, int w, int h) {
 	payload += ',';
 }
 
+void AppendOutputField(std::string& payload, const std::string& output) {
+	payload += "\"output\":\"";
+	payload += JsonEscape(output);
+	payload += "\",";
+}
+
 }  // namespace
 
 // ---------------------------------------------------------------------------
-// SCREENSHOT [path=FILE] [inline=true|false]
+// SCREENSHOT [path=FILE] [inline=true|false] [output=NAME]
 //   Default: inline=true (base64-encoded PNG in "data").
 //   With path=FILE: writes PNG to FILE on the server-side filesystem.
 //                   "data" is omitted; "path" echoes the written path.
+//   output=NAME: computer (default), display, or a device video output
+//                name (see CaptureXrgb). Echoed as "output".
 // ---------------------------------------------------------------------------
 
 std::string CmdScreenshot(ATSimulator& sim, const std::vector<std::string>& tokens) {
 	std::string path;
+	std::string output = "computer";
 	bool wantInline = true;
 	bool pathSet    = false;
 	for (size_t i = 1; i < tokens.size(); ++i) {
 		std::string v;
 		if (MatchKey(tokens[i], "path", v))   { path = v; pathSet = true; continue; }
 		if (MatchKey(tokens[i], "inline", v)) { wantInline = IsTrueLiteral(v); continue; }
+		if (MatchKey(tokens[i], "output", v)) { output = v; continue; }
 		return JsonError("SCREENSHOT: unknown option: " + tokens[i]);
 	}
+	if (output.empty())
+		return JsonError("SCREENSHOT: output= requires a name");
 	if (pathSet) wantInline = false;
 	if (!pathSet && !wantInline)
 		return JsonError("SCREENSHOT: must specify path= or inline=true");
 
 	VDPixmapBuffer pm;
-	if (!CaptureXrgb(sim, pm))
-		return JsonError("SCREENSHOT: no frame available yet");
+	std::string error;
+	if (!CaptureXrgb(sim, output, pm, error))
+		return JsonError("SCREENSHOT: " + error);
 
 	std::vector<uint32_t> packed;
 	PackXrgb(pm, packed);
@@ -264,6 +362,7 @@ std::string CmdScreenshot(ATSimulator& sim, const std::vector<std::string>& toke
 	std::string payload;
 	AppendDimField(payload, pm.w, pm.h);
 	payload += "\"format\":\"png\",";
+	AppendOutputField(payload, output);
 
 	if (pathSet) {
 		if (!WriteAllToFile(path, png.data(), png.size()))
@@ -283,8 +382,8 @@ std::string CmdScreenshot(ATSimulator& sim, const std::vector<std::string>& toke
 }
 
 // ---------------------------------------------------------------------------
-// RAWSCREEN [path=FILE] [inline=true|false]
-//   Emits the raw XRGB8888 buffer. Pixel format is declared in the
+// RAWSCREEN [path=FILE] [inline=true|false] [output=NAME]
+//   Emits the raw XRGB8888 buffer. output= as for SCREENSHOT. Pixel format is declared in the
 //   response so a client can decode without guessing:
 //     {"format":"xrgb8888","endian":"little","width":W,"height":H,...}
 //   Each 32-bit word is 0x00RRGGBB in native little-endian byte order
@@ -294,21 +393,26 @@ std::string CmdScreenshot(ATSimulator& sim, const std::vector<std::string>& toke
 
 std::string CmdRawScreen(ATSimulator& sim, const std::vector<std::string>& tokens) {
 	std::string path;
+	std::string output = "computer";
 	bool wantInline = true;
 	bool pathSet    = false;
 	for (size_t i = 1; i < tokens.size(); ++i) {
 		std::string v;
 		if (MatchKey(tokens[i], "path", v))   { path = v; pathSet = true; continue; }
 		if (MatchKey(tokens[i], "inline", v)) { wantInline = IsTrueLiteral(v); continue; }
+		if (MatchKey(tokens[i], "output", v)) { output = v; continue; }
 		return JsonError("RAWSCREEN: unknown option: " + tokens[i]);
 	}
+	if (output.empty())
+		return JsonError("RAWSCREEN: output= requires a name");
 	if (pathSet) wantInline = false;
 	if (!pathSet && !wantInline)
 		return JsonError("RAWSCREEN: must specify path= or inline=true");
 
 	VDPixmapBuffer pm;
-	if (!CaptureXrgb(sim, pm))
-		return JsonError("RAWSCREEN: no frame available yet");
+	std::string error;
+	if (!CaptureXrgb(sim, output, pm, error))
+		return JsonError("RAWSCREEN: " + error);
 
 	std::vector<uint32_t> packed;
 	PackXrgb(pm, packed);
@@ -319,6 +423,7 @@ std::string CmdRawScreen(ATSimulator& sim, const std::vector<std::string>& token
 	std::string payload;
 	AppendDimField(payload, pm.w, pm.h);
 	payload += "\"format\":\"xrgb8888\",";
+	AppendOutputField(payload, output);
 	payload += "\"endian\":\"little\",";
 	payload += "\"stride\":";
 	payload += std::to_string(pm.w * 4);
@@ -357,6 +462,59 @@ std::string CmdRenderFrame(ATSimulator& sim, const std::vector<std::string>& tok
 		return JsonError("RENDER_FRAME: unknown option: " + tokens[i]);
 	std::vector<std::string> forced = { "SCREENSHOT", "inline=true" };
 	return CmdScreenshot(sim, forced);
+}
+
+// ---------------------------------------------------------------------------
+// VIDEO_OUTPUTS
+//   Lists the device video outputs (View > Video Outputs) that can be
+//   passed to SCREENSHOT/RAWSCREEN output=. "selected" is the output
+//   shown in the display area ("" = the computer picture).
+//     {"ok":true,"selected":"","outputs":[{"name":"maria",
+//      "display_name":"MARIA","signal_valid":true,"pass_through":false,
+//      "width":320,"height":240}]}
+// ---------------------------------------------------------------------------
+
+std::string CmdVideoOutputs(ATSimulator& sim, const std::vector<std::string>& tokens) {
+	if (tokens.size() != 1)
+		return JsonError("VIDEO_OUTPUTS: usage: VIDEO_OUTPUTS");
+
+	IATDeviceVideoManager* vm = GetVideoManager(sim);
+
+	std::string payload = "\"selected\":\"";
+	payload += JsonEscape(ATUIGetCurrentAltOutputName());
+	payload += "\",\"outputs\":[";
+
+	const uint32 n = vm ? vm->GetOutputCount() : 0;
+	bool first = true;
+	for (uint32 i = 0; i < n; ++i) {
+		IATDeviceVideoOutput* output = vm->GetOutput(i);
+		if (!output)
+			continue;
+
+		const ATDeviceVideoInfo& vi = output->GetVideoInfo();
+		const VDPixmap& fb = output->GetFrameBuffer();
+
+		if (!first)
+			payload += ',';
+		first = false;
+
+		payload += "{\"name\":\"";
+		payload += JsonEscape(output->GetName());
+		payload += "\",\"display_name\":\"";
+		payload += JsonEscape(VDTextWToU8(VDStringW(output->GetDisplayName())).c_str());
+		payload += "\",\"signal_valid\":";
+		payload += vi.mbSignalValid ? "true" : "false";
+		payload += ",\"pass_through\":";
+		payload += vi.mbSignalPassThrough ? "true" : "false";
+		payload += ",\"width\":";
+		payload += std::to_string(fb.w);
+		payload += ",\"height\":";
+		payload += std::to_string(fb.h);
+		payload += '}';
+	}
+
+	payload += ']';
+	return JsonOk(payload);
 }
 
 }  // namespace ATBridge

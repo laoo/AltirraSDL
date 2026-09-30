@@ -10,7 +10,7 @@ examples. For full request/response schemas and field semantics see
 | [State read](#state-read)             | `REGS`, `PEEK`, `PEEK16`, `ANTIC`, `GTIA`, `POKEY`, `PIA`, `DLIST`, `HWSTATE`, `PALETTE`, `PALETTE_LOAD_ACT`, `PALETTE_RESET` |
 | [State write & input](#state-write--input) | `POKE`, `POKE16`, `HWPOKE`, `MEMDUMP`, `MEMLOAD`, `JOY`, `KEY`, `KEYRAW`, `CONSOL`, `BOOT`, `BOOT_BARE`, `MOUNT`, `COLD_RESET`, `WARM_RESET`, `CONFIG`, `DEVICE_LIST`, `DEVICE_GET`, `DEVICE_SET`, `DEVICE_REMOVE`, `DEVICE_CLEAR` |
 | [Save states](#save-states)           | `STATE_SAVE`, `STATE_LOAD`, `STATE_LIST`, `STATE_DROP` |
-| [Rendering](#rendering)               | `SCREENSHOT`, `RAWSCREEN`, `RENDER_FRAME` |
+| [Rendering](#rendering)               | `SCREENSHOT`, `RAWSCREEN`, `RENDER_FRAME`, `VIDEO_OUTPUTS` |
 | [Debugger introspection](#debugger-introspection) | `DISASM`, `HISTORY`, `EVAL`, `CALLSTACK`, `MEMMAP`, `BANK_INFO`, `CART_INFO`, `PMG`, `AUDIO_STATE` |
 | [Breakpoints](#breakpoints)           | `BP_SET`, `BP_CLEAR`, `BP_CLEAR_ALL`, `BP_LIST`, `WATCH_SET` |
 | [Symbols & search](#symbols--search)  | `SYM_LOAD`, `SYM_RESOLVE`, `SYM_LOOKUP`, `MEMSEARCH` |
@@ -233,6 +233,13 @@ frame = a.rawscreen()
 print(frame.width, frame.height, len(frame.pixels))
 
 # For PIL: Image.frombytes("RGBA", (w, h), frame.pixels_rgba())
+
+# Device video outputs (e.g. the MARIA PBI device's separate output)
+print(a.video_outputs())              # {"selected": "", "outputs": [...]}
+maria_png = a.screenshot(output="maria")
+a.screenshot(path="/tmp/maria.png", output="maria")
+maria_raw = a.rawscreen(output="maria")
+shown_png = a.screenshot(output="display")   # whatever View > Video Outputs shows
 ```
 
 ```c
@@ -245,7 +252,19 @@ atb_screenshot_path(c, "/tmp/frame.png");
 unsigned char* rgba; size_t rlen; unsigned int rw, rh;
 atb_rawscreen_inline(c, &rgba, &rlen, &rw, &rh);
 free(rgba);
+
+/* Device video outputs: "computer" (default), "display", or a name
+ * from atb_video_outputs(), e.g. "maria". */
+atb_video_outputs(c);                 /* JSON in atb_last_response(c) */
+atb_screenshot_output_inline(c, "maria", &png, &len, &w, &h);
+free(png);
+atb_screenshot_output_path(c, "maria", "/tmp/maria.png");
+atb_rawscreen_output_inline(c, "maria", &rgba, &rlen, &rw, &rh);
+free(rgba);
 ```
+
+Wire form: `SCREENSHOT path=/tmp/maria.png output=maria`,
+`RAWSCREEN inline=true output=maria`, `VIDEO_OUTPUTS`.
 
 ## Debugger introspection
 

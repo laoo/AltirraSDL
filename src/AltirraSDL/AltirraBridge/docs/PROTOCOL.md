@@ -905,20 +905,38 @@ The headless `AltirraBridgeServer` target installs a null
 display backend; the rendering commands work identically in headless
 and GUI mode.
 
-#### `SCREENSHOT [path=FILE] [inline=true|false]`
+#### `SCREENSHOT [path=FILE] [inline=true|false] [output=NAME]`
 
 Capture the last GTIA frame as a PNG. Default mode is inline.
 
 ```json
-{"ok":true,"width":336,"height":240,"format":"png",
+{"ok":true,"width":336,"height":240,"format":"png","output":"computer",
  "encoding":"base64","data":"iVBORw0KGgoAAAANSUhEUgAA..."}
 ```
 
 With `path=FILE`:
 
 ```json
-{"ok":true,"width":336,"height":240,"format":"png",
+{"ok":true,"width":336,"height":240,"format":"png","output":"computer",
  "path":"/tmp/frame.png","bytes":242243}
+```
+
+`output=NAME` selects which video output is captured; the value is
+echoed back as `"output"`:
+
+| `NAME` | Captured picture |
+|--------|------------------|
+| `computer` (default) | the last GTIA frame |
+| `display` | the output selected under View > Video Outputs (the GTIA frame when none is selected, or when the selected device is gone) |
+| device output name | that device's video output, whether or not it is shown — e.g. `maria` (MARIA PBI device, 320×240), `xep80`; see `VIDEO_OUTPUTS` |
+
+Device outputs are captured at their native frame buffer size with
+no aspect correction (like the GTIA frame). An output that passes
+the computer's signal through yields the GTIA frame. An unknown name
+fails with the list of available names:
+
+```json
+{"ok":false,"error":"SCREENSHOT: unknown video output: maria (available: computer)"}
 ```
 
 The PNG encoder is vendored in the bridge module — it's a
@@ -926,15 +944,16 @@ self-contained store-block deflate writer. No external image
 library is required on the server side, and the output is bit-for-
 bit deterministic for a given pixel buffer.
 
-#### `RAWSCREEN [path=FILE] [inline=true|false]`
+#### `RAWSCREEN [path=FILE] [inline=true|false] [output=NAME]`
 
-Capture the last GTIA frame as a raw XRGB8888 buffer. Each 32-bit
+Capture the last GTIA frame (or, with `output=NAME`, the selected
+video output — same values as `SCREENSHOT`) as a raw XRGB8888 buffer. Each 32-bit
 word is `0x00RRGGBB` in native little-endian order, so on the wire
 the bytes are `B, G, R, 0` per pixel. `stride == width * 4`.
 
 ```json
 {"ok":true,"width":336,"height":240,"format":"xrgb8888",
- "endian":"little","stride":1344,
+ "output":"computer","endian":"little","stride":1344,
  "encoding":"base64","data":"AAAAAA..."}
 ```
 
@@ -952,6 +971,20 @@ older one.
 ```json
 {"ok":true,"width":336,"height":240,"format":"png",
  "encoding":"base64","data":"iVBORw0KGgoAAA..."}
+```
+
+#### `VIDEO_OUTPUTS`
+
+List the device video outputs (View > Video Outputs) that
+`SCREENSHOT` / `RAWSCREEN` accept as `output=NAME`. `selected` is the
+output shown in the display area (`""` = the computer picture).
+`width`/`height` are the output's frame buffer size.
+
+```json
+{"ok":true,"selected":"","outputs":[
+  {"name":"maria","display_name":"MARIA","signal_valid":true,
+   "pass_through":false,"width":320,"height":240}
+]}
 ```
 
 ### Phase 5a commands — debugger introspection

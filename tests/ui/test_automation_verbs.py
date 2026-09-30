@@ -258,3 +258,47 @@ class TestNonInteractiveQuit:
                 pytest.fail("process still running 10s after SIGTERM "
                             "(Confirm Exit modal bypass not working)")
             assert code == 0
+
+
+class TestScreenshotOutputs:
+    """screenshot <path> [display|computer|<output-name>] and
+    list_video_outputs: capture device video outputs such as MARIA."""
+
+    @staticmethod
+    def _png_size(path) -> tuple[int, int]:
+        with open(path, "rb") as f:
+            head = f.read(24)
+        assert head[:8] == b"\x89PNG\r\n\x1a\n"
+        return (int.from_bytes(head[16:20], "big"),
+                int.from_bytes(head[20:24], "big"))
+
+    def test_list_video_outputs_shape(self, emu: AltirraTestHarness):
+        resp = emu.list_video_outputs()
+        assert isinstance(resp["selected"], str)
+        for out in resp["outputs"]:
+            assert out["name"]
+            assert out["width"] >= 0 and out["height"] >= 0
+
+    @pytest.mark.parametrize("output", [None, "display", "computer"])
+    def test_screenshot_computer_and_display(self, emu: AltirraTestHarness,
+                                             tmp_path, output):
+        emu.wait_frames(2)
+        path = tmp_path / f"shot-{output}.png"
+        resp = emu.screenshot(str(path), output)
+        assert resp["output"] == (output or "display")
+        assert self._png_size(path) == (resp["width"], resp["height"])
+
+    def test_unknown_output_is_an_error(self, emu: AltirraTestHarness,
+                                        tmp_path):
+        with pytest.raises(CommandError, match="unknown video output"):
+            emu.screenshot(str(tmp_path / "x.png"), "no_such_output")
+
+    def test_device_outputs_can_be_captured(self, emu: AltirraTestHarness,
+                                            tmp_path):
+        outputs = emu.list_video_outputs()["outputs"]
+        if not outputs:
+            pytest.skip("no device video outputs in the current profile")
+        for out in outputs:
+            path = tmp_path / f"{out['name']}.png"
+            resp = emu.screenshot(str(path), out["name"])
+            assert self._png_size(path) == (resp["width"], resp["height"])

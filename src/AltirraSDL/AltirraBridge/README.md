@@ -457,7 +457,7 @@ shared filesystem that doesn't exist on Android.
 | 1     | Skeleton: `HELLO`, `PING`, `FRAME`, `PAUSE`, `RESUME`, `QUIT`. TCP+UDS, token auth. | done |
 | 2     | State read: `REGS`, `PEEK`, `PEEK16`, `ANTIC`, `GTIA`, `POKEY`, `PIA`, `DLIST`, `HWSTATE`, `PALETTE`. | done |
 | 3     | State write & input: `POKE`, `MEMDUMP`, `MEMLOAD`, `JOY`, `KEY`, `CONSOL`, `BOOT`, resets, save states. | done |
-| 4     | Rendering: `SCREENSHOT`, `RAWSCREEN`, `RENDER_FRAME`.                         | done |
+| 4     | Rendering: `SCREENSHOT`, `RAWSCREEN`, `RENDER_FRAME`, `VIDEO_OUTPUTS`.        | done |
 | 5a    | Debugger introspection: `DISASM`, `HISTORY`, `EVAL`, `CALLSTACK`, `MEMMAP`, `BANK_INFO`, `CART_INFO`, `PMG`, `AUDIO_STATE`. | done |
 | 5b    | Debugger control: breakpoints, watches, symbols, memsearch, profiler, verifier. | done |
 | 6     | SDK polish, finalised C and Python client APIs.                               | done |

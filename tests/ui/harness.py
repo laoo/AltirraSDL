@@ -183,8 +183,22 @@ class AltirraTestHarness:
     def query_window(self, title: str) -> dict:
         return self.send(f'query_window "{title}"')
 
-    def screenshot(self, path: str) -> dict:
-        return self.send(f"screenshot {path}")
+    def screenshot(self, path: str, output: Optional[str] = None) -> dict:
+        """Save the emulator picture to ``path``.
+
+        ``output`` selects the video output: ``None``/``"display"`` for
+        what the display area shows (as Save Frame), ``"computer"`` for
+        the GTIA picture, or a device output name from
+        :meth:`list_video_outputs` such as ``"maria"``.
+        """
+        cmd = f'screenshot "{path}"'
+        if output:
+            cmd += f" {output}"
+        return self.send(cmd)
+
+    def list_video_outputs(self) -> dict:
+        """Device video outputs (View > Video Outputs) and the one shown."""
+        return self.send("list_video_outputs")
 
     def cold_reset(self) -> dict:
         return self.send("cold_reset")

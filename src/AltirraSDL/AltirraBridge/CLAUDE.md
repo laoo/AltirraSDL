@@ -64,7 +64,7 @@ The wire protocol is **newline-delimited JSON over TCP (or Unix domain socket on
 - `docs/COMMANDS.md` — one-line reference for every command
 - `docs/WRITING_A_CLIENT.md` — ten-bullet distillation + worked Rust and Go clients (~80 lines each)
 
-Commands are grouped by phase (see README Status table): skeleton (`HELLO`/`PING`/`FRAME`/`PAUSE`), state read (`REGS`/`PEEK`/`ANTIC`/`GTIA`/...), state write + input (`POKE`/`JOY`/`KEY`/`BOOT`/save states), rendering (`SCREENSHOT`/`RAWSCREEN`/`RENDER_FRAME`), debugger (`DISASM`/`HISTORY`/breakpoints/watches/symbols/profiler). Phase 5c (`SIO_TRACE`, `VERIFIER_REPORT`, `SYM_FIND`, tracepoint format strings) is deferred/pending.
+Commands are grouped by phase (see README Status table): skeleton (`HELLO`/`PING`/`FRAME`/`PAUSE`), state read (`REGS`/`PEEK`/`ANTIC`/`GTIA`/...), state write + input (`POKE`/`JOY`/`KEY`/`BOOT`/save states), rendering (`SCREENSHOT`/`RAWSCREEN`/`RENDER_FRAME`/`VIDEO_OUTPUTS`; `output=NAME` captures a device video output such as MARIA), debugger (`DISASM`/`HISTORY`/breakpoints/watches/symbols/profiler). Phase 5c (`SIO_TRACE`, `VERIFIER_REPORT`, `SYM_FIND`, tracepoint format strings) is deferred/pending.
 
 ## Android / headless-filesystem note
 
