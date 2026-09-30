@@ -19,7 +19,7 @@ from typing import Any, Dict, Iterator, List, Optional
 
 @dataclass
 class RawFrame:
-    """A raw GTIA frame capture returned by :meth:`AltirraBridge.rawscreen`.
+    """A raw frame capture returned by :meth:`AltirraBridge.rawscreen`.
 
     Pixel format is XRGB8888 little-endian: each 4-byte group is
     (B, G, R, 0) in memory order. ``stride == width * 4``.
@@ -848,11 +848,13 @@ class AltirraBridge:
         return self.config("addons", "stock")
 
     # ------------------------------------------------------------------
-    # Phase 4 commands — rendering (SCREENSHOT / RAWSCREEN / RENDER_FRAME)
+    # Phase 4 commands — rendering (SCREENSHOT / RAWSCREEN / RENDER_FRAME /
+    # VIDEO_OUTPUTS)
     # ------------------------------------------------------------------
 
-    def screenshot(self, path: Optional[str] = None) -> bytes:
-        """Capture the last GTIA frame as a PNG.
+    def screenshot(self, path: Optional[str] = None,
+                   output: Optional[str] = None) -> bytes:
+        """Capture a frame as a PNG.
 
         * With ``path=None`` (default): returns PNG bytes inline.
         * With ``path="/tmp/foo.png"``: writes the PNG to the
@@ -861,20 +863,27 @@ class AltirraBridge:
           an empty ``bytes`` object in that case (the PNG lives on
           the server).
 
+        ``output`` selects the video output: ``None``/``"computer"``
+        (the last GTIA frame), ``"display"`` (the output selected under
+        View > Video Outputs), or a device output name from
+        :meth:`video_outputs` such as ``"maria"`` or ``"xep80"``.
+
         On headless ``AltirraBridgeServer`` a null display backend
         keeps ``mpLastFrame`` populated, so this works with or without
         a GUI window attached.
         """
         import base64
+        opt = "" if output is None else " " + _quote_token(f"output={output}")
         if path is None:
-            resp = self._cmd_ok("SCREENSHOT inline=true")
+            resp = self._cmd_ok("SCREENSHOT inline=true" + opt)
             return base64.b64decode(resp["data"])
         else:
-            self._cmd_ok(f"SCREENSHOT path={path}")
+            self._cmd_ok(f"SCREENSHOT path={path}" + opt)
             return b""
 
-    def rawscreen(self, path: Optional[str] = None) -> "RawFrame":
-        """Capture the last GTIA frame as a raw XRGB8888 little-endian
+    def rawscreen(self, path: Optional[str] = None,
+                  output: Optional[str] = None) -> "RawFrame":
+        """Capture a frame as a raw XRGB8888 little-endian
         buffer. Bytes on the wire are B, G, R, 0 per pixel (native
         little-endian order).
 
@@ -882,10 +891,13 @@ class AltirraBridge:
         ``stride`` and ``pixels`` (the raw bytes). Use :meth:`pixels_rgba`
         to convert to R, G, B, A order if your downstream consumer
         (e.g. PIL ``Image.frombytes``) expects that.
+
+        ``output`` selects the video output as for :meth:`screenshot`.
         """
         import base64
+        opt = "" if output is None else " " + _quote_token(f"output={output}")
         if path is None:
-            resp = self._cmd_ok("RAWSCREEN inline=true")
+            resp = self._cmd_ok("RAWSCREEN inline=true" + opt)
             return RawFrame(
                 width=int(resp["width"]),
                 height=int(resp["height"]),
@@ -893,13 +905,24 @@ class AltirraBridge:
                 pixels=base64.b64decode(resp["data"]),
             )
         else:
-            resp = self._cmd_ok(f"RAWSCREEN path={path}")
+            resp = self._cmd_ok(f"RAWSCREEN path={path}" + opt)
             return RawFrame(
                 width=int(resp["width"]),
                 height=int(resp["height"]),
                 stride=int(resp["stride"]),
                 pixels=b"",
             )
+
+    def video_outputs(self) -> dict:
+        """List device video outputs (View > Video Outputs) usable as
+        ``output=`` for :meth:`screenshot` / :meth:`rawscreen`.
+
+        Returns a dict with ``selected`` (output shown in the display
+        area, ``""`` for the computer) and ``outputs``: a list of dicts
+        with ``name``, ``display_name``, ``signal_valid``,
+        ``pass_through``, ``width`` and ``height``.
+        """
+        return self._cmd_ok("VIDEO_OUTPUTS")
 
     def render_frame(self) -> bytes:
         """Alias for :meth:`screenshot()` (inline PNG). Reserved for a

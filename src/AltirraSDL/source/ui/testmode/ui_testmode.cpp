@@ -17,6 +17,7 @@
 #include <vd2/system/error.h>
 #include <vd2/system/text.h>
 #include <at/atui/uicommandmanager.h>
+#include <at/atcore/devicevideo.h>
 
 #include "testmode_ipc.h"
 #include "ui_testmode.h"
@@ -29,6 +30,7 @@
 #include "ui/tools/setup_wizard_shared.h"
 #include "media/metadata_settings.h"
 #include "simulator.h"
+#include "devicemanager.h"
 #include "gtia.h"
 #include "oshelper.h"
 #include "inputmanager.h"
@@ -2314,15 +2316,35 @@ static std::string DispatchCommand(std::string cmd, ATSimulator &sim, ATUIState 
 	}
 
 	// --- Screenshot ---
+	// screenshot <path> [display|computer|<output-name>]
+	//   display (default) - what the display area shows, as Save Frame
+	//   computer          - the computer's (GTIA) picture
+	//   <output-name>     - a device video output by internal name (see
+	//                       list_video_outputs), e.g. "maria" or "xep80",
+	//                       whether or not it is currently shown
 	if (verb == "screenshot") {
 		std::string path = NextToken(cmd);
 		if (path.empty())
-			return JsonError("usage: screenshot <path>");
+			return JsonError("usage: screenshot <path> [display|computer|<output-name>]");
+
+		std::string output = NextToken(cmd);
+		if (output.empty())
+			output = "display";
+
+		if (!NextToken(cmd).empty())
+			return JsonError("usage: screenshot <path> [display|computer|<output-name>]");
+
+		int width = 0;
+		int height = 0;
 
 		try {
 			VDPixmapBuffer frame;
-			if (!ATUICaptureEmulatorFrame(sim, ATUIFrameCaptureMode::Display, frame))
-				return JsonError("no emulator frame is available");
+			VDStringA error;
+			if (!ATUICaptureVideoOutputFrame(sim, output.c_str(), ATUIFrameCaptureMode::Display, frame, &error))
+				return JsonError(error.c_str());
+
+			width = frame.w;
+			height = frame.h;
 
 			const VDStringW pathW = VDTextU8ToW(path.c_str(), -1);
 			ATSaveFrame(frame, pathW.c_str());
@@ -2330,7 +2352,56 @@ static std::string DispatchCommand(std::string cmd, ATSimulator &sim, ATUIState 
 			return JsonError(e.c_str());
 		}
 
-		return "{\"ok\":true,\"path\":\"" + JsonEscape(path) + "\"}";
+		return "{\"ok\":true,\"path\":\"" + JsonEscape(path)
+			+ "\",\"output\":\"" + JsonEscape(output)
+			+ "\",\"width\":" + std::to_string(width)
+			+ ",\"height\":" + std::to_string(height) + "}";
+	}
+
+	// --- Device video outputs (View > Video Outputs) ---
+	// Response: {"ok":true,"selected":"<name or empty>","outputs":[
+	//   {"name":"maria","display_name":"MARIA","signal_valid":true,
+	//    "pass_through":false,"width":320,"height":240}, ...]}
+	// "selected" is the output shown in the display area ("" = computer).
+	if (verb == "list_video_outputs") {
+		ATDeviceManager *dm = sim.GetDeviceManager();
+		IATDeviceVideoManager *vm = dm ? dm->GetService<IATDeviceVideoManager>() : nullptr;
+
+		std::string json = "{\"ok\":true,\"selected\":\"";
+		json += JsonEscape(ATUIGetCurrentAltOutputName());
+		json += "\",\"outputs\":[";
+
+		const uint32 n = vm ? vm->GetOutputCount() : 0;
+		bool first = true;
+		for (uint32 i = 0; i < n; ++i) {
+			IATDeviceVideoOutput *output = vm->GetOutput(i);
+			if (!output)
+				continue;
+
+			const ATDeviceVideoInfo& vi = output->GetVideoInfo();
+			const VDPixmap& fb = output->GetFrameBuffer();
+
+			if (!first)
+				json += ',';
+			first = false;
+
+			json += "{\"name\":\"";
+			json += JsonEscape(output->GetName());
+			json += "\",\"display_name\":\"";
+			json += JsonEscape(VDTextWToU8(VDStringW(output->GetDisplayName())).c_str());
+			json += "\",\"signal_valid\":";
+			json += vi.mbSignalValid ? "true" : "false";
+			json += ",\"pass_through\":";
+			json += vi.mbSignalPassThrough ? "true" : "false";
+			json += ",\"width\":";
+			json += std::to_string(fb.w);
+			json += ",\"height\":";
+			json += std::to_string(fb.h);
+			json += '}';
+		}
+
+		json += "]}";
+		return json;
 	}
 
 	// --- Memory inspection (read-only, side-effect-free) ---
@@ -2708,7 +2779,8 @@ static std::string DispatchCommand(std::string cmd, ATSimulator &sim, ATUIState 
 			"\"key <delete|escape|enter|tab|f2|f9|pageup|pagedown|home|end|up|down|left|right|ctrl+f>\","
 			"\"mouse_move <x> <y>\","
 			"\"wait_frames [n]\","
-			"\"screenshot <path>\","
+			"\"screenshot <path> [display|computer|<output-name>]\","
+			"\"list_video_outputs\","
 			"\"mem_read <hex_addr> [<count>]\","
 			"\"input joy <unit> <left|right|up|down|fire|release_all>\","
 			"\"input console <start|select|option> [up]\","

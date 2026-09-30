@@ -1005,17 +1005,58 @@ static int atb_decode_inline_data(atb_client_t* c, unsigned char** out_buf, size
 	return ATB_OK;
 }
 
-int atb_screenshot_inline(atb_client_t* c,
-                          unsigned char** out_png, size_t* out_len,
-                          unsigned int* out_w, unsigned int* out_h) {
-	if (!out_png || !out_len) return ATB_ERR_BAD_ARG;
-	int rc = atb_simple_cmd(c, "SCREENSHOT inline=true");
+/* Build "VERB <opts>[ output=NAME]" into a malloc'd string. Returns
+ * NULL (with the error set) on a bad output name or allocation failure;
+ * *rc receives the matching error code. */
+static char* atb_build_output_cmd(atb_client_t* c, const char* verb_opts,
+                                  const char* output, int* rc) {
+	if (output) {
+		if (!*output) { *rc = ATB_ERR_BAD_ARG; return NULL; }
+		for (const char* q = output; *q; ++q) {
+			if (*q == ' ' || *q == '\t' || *q == '\r' || *q == '\n'
+			    || *q == '"' || *q == '\'' || *q == '\\') {
+				*rc = ATB_ERR_BAD_ARG;
+				return NULL;
+			}
+		}
+	}
+	size_t need = strlen(verb_opts) + (output ? 8 + strlen(output) : 0) + 1;
+	char* cmd = (char*)malloc(need);
+	if (!cmd) {
+		atb_set_error(c, "out of memory");
+		*rc = ATB_ERR_NETWORK;
+		return NULL;
+	}
+	if (output)
+		snprintf(cmd, need, "%s output=%s", verb_opts, output);
+	else
+		snprintf(cmd, need, "%s", verb_opts);
+	return cmd;
+}
+
+static int atb_capture_inline(atb_client_t* c, const char* verb_opts,
+                              const char* output,
+                              unsigned char** out_buf, size_t* out_len,
+                              unsigned int* out_w, unsigned int* out_h) {
+	if (!out_buf || !out_len) return ATB_ERR_BAD_ARG;
+	int rc = ATB_OK;
+	char* cmd = atb_build_output_cmd(c, verb_opts, output, &rc);
+	if (!cmd) return rc;
+	rc = atb_simple_cmd(c, cmd);
+	free(cmd);
 	if (rc != ATB_OK) return rc;
-	rc = atb_decode_inline_data(c, out_png, out_len);
+	rc = atb_decode_inline_data(c, out_buf, out_len);
 	if (rc != ATB_OK) return rc;
 	if (out_w) { unsigned long v = 0; if (atb_extract_uint(c->response, "width",  &v)) *out_w = (unsigned)v; }
 	if (out_h) { unsigned long v = 0; if (atb_extract_uint(c->response, "height", &v)) *out_h = (unsigned)v; }
 	return ATB_OK;
+}
+
+int atb_screenshot_inline(atb_client_t* c,
+                          unsigned char** out_png, size_t* out_len,
+                          unsigned int* out_w, unsigned int* out_h) {
+	return atb_capture_inline(c, "SCREENSHOT inline=true", NULL,
+	                          out_png, out_len, out_w, out_h);
 }
 
 int atb_screenshot_path(atb_client_t* c, const char* path) {
@@ -1025,14 +1066,42 @@ int atb_screenshot_path(atb_client_t* c, const char* path) {
 int atb_rawscreen_inline(atb_client_t* c,
                          unsigned char** out_pixels, size_t* out_len,
                          unsigned int* out_w, unsigned int* out_h) {
-	if (!out_pixels || !out_len) return ATB_ERR_BAD_ARG;
-	int rc = atb_simple_cmd(c, "RAWSCREEN inline=true");
-	if (rc != ATB_OK) return rc;
-	rc = atb_decode_inline_data(c, out_pixels, out_len);
-	if (rc != ATB_OK) return rc;
-	if (out_w) { unsigned long v = 0; if (atb_extract_uint(c->response, "width",  &v)) *out_w = (unsigned)v; }
-	if (out_h) { unsigned long v = 0; if (atb_extract_uint(c->response, "height", &v)) *out_h = (unsigned)v; }
-	return ATB_OK;
+	return atb_capture_inline(c, "RAWSCREEN inline=true", NULL,
+	                          out_pixels, out_len, out_w, out_h);
+}
+
+int atb_screenshot_output_inline(atb_client_t* c, const char* output,
+                                 unsigned char** out_png, size_t* out_len,
+                                 unsigned int* out_w, unsigned int* out_h) {
+	return atb_capture_inline(c, "SCREENSHOT inline=true", output,
+	                          out_png, out_len, out_w, out_h);
+}
+
+int atb_screenshot_output_path(atb_client_t* c, const char* output,
+                               const char* path) {
+	if (!path) return ATB_ERR_BAD_ARG;
+	size_t opts_size = 16 + strlen(path) + 1;
+	char* opts = (char*)malloc(opts_size);
+	if (!opts) { atb_set_error(c, "out of memory"); return ATB_ERR_NETWORK; }
+	snprintf(opts, opts_size, "SCREENSHOT path=%s", path);
+	int rc = ATB_OK;
+	char* cmd = atb_build_output_cmd(c, opts, output, &rc);
+	free(opts);
+	if (!cmd) return rc;
+	rc = atb_simple_cmd(c, cmd);
+	free(cmd);
+	return rc;
+}
+
+int atb_rawscreen_output_inline(atb_client_t* c, const char* output,
+                                unsigned char** out_pixels, size_t* out_len,
+                                unsigned int* out_w, unsigned int* out_h) {
+	return atb_capture_inline(c, "RAWSCREEN inline=true", output,
+	                          out_pixels, out_len, out_w, out_h);
+}
+
+int atb_video_outputs(atb_client_t* c) {
+	return atb_simple_cmd(c, "VIDEO_OUTPUTS");
 }
 
 /* --------------------------------------------------------------------- */

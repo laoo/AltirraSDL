@@ -383,6 +383,18 @@ int atb_state_drop(atb_client_t* c, const char* slot);
  * buffer plus its dimensions. Pixel format: each 4-byte group is
  * (B, G, R, 0) in memory order. stride == width * 4. Caller owns
  * *out_pixels and must free() it.
+ *
+ * The plain variants capture the computer's (GTIA) frame. The
+ * *_output variants take the video output to capture (SCREENSHOT /
+ * RAWSCREEN output=NAME): "computer", "display" (the output selected
+ * under View > Video Outputs) or a device output name such as "maria"
+ * or "xep80". NULL means "computer". Names must not contain
+ * whitespace or quotes.
+ *
+ * atb_video_outputs() sends VIDEO_OUTPUTS; the JSON response (the
+ * "selected" output and an "outputs" array with name, display_name,
+ * signal_valid, pass_through, width, height) is left in
+ * atb_last_response().
  */
 int atb_screenshot_inline(atb_client_t* c,
                           unsigned char** out_png, size_t* out_len,
@@ -392,6 +404,16 @@ int atb_screenshot_path(atb_client_t* c, const char* path);
 int atb_rawscreen_inline(atb_client_t* c,
                          unsigned char** out_pixels, size_t* out_len,
                          unsigned int* out_w, unsigned int* out_h);
+
+int atb_screenshot_output_inline(atb_client_t* c, const char* output,
+                                 unsigned char** out_png, size_t* out_len,
+                                 unsigned int* out_w, unsigned int* out_h);
+int atb_screenshot_output_path(atb_client_t* c, const char* output,
+                               const char* path);
+int atb_rawscreen_output_inline(atb_client_t* c, const char* output,
+                                unsigned char** out_pixels, size_t* out_len,
+                                unsigned int* out_w, unsigned int* out_h);
+int atb_video_outputs(atb_client_t* c);
 
 /*
  * Phase 5a — debugger introspection.

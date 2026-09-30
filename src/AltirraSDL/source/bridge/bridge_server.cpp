@@ -379,6 +379,7 @@ std::string DispatchCommand(const std::string& line, ATSimulator& sim) {
 	if (verb == "SCREENSHOT")   return CmdScreenshot (sim, tokens);
 	if (verb == "RAWSCREEN")    return CmdRawScreen  (sim, tokens);
 	if (verb == "RENDER_FRAME") return CmdRenderFrame(sim, tokens);
+	if (verb == "VIDEO_OUTPUTS") return CmdVideoOutputs(sim, tokens);
 
 	// Phase 5a: debugger/profiler commands
 	if (verb == "DISASM")      return CmdDisasm    (sim, tokens);

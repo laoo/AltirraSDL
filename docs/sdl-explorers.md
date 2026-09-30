@@ -107,7 +107,9 @@ Test-mode commands supplement ordinary widget interactions:
 - `file_dialog_builtin on|off` selects deterministic built-in pickers.
 - `explorer_drop <x> <y> <path>` checks normal Explorer drop routing.
 - `ui_screenshot <path>` captures the frontend framebuffer. The existing
-  `screenshot` command continues to capture the emulator image.
+  `screenshot <path> [display|computer|<output-name>]` command continues to
+  capture the emulator image (optionally a device video output such as
+  `maria`).
 
 Native macOS/Windows pickers and real desktop drag events still merit manual
 platform checks; offscreen UI tests do not exercise OS picker implementations.

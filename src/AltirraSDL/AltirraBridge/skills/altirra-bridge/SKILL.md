@@ -122,7 +122,7 @@ atb_close(c);
 | State read         | `REGS PEEK PEEK16 ANTIC GTIA POKEY PIA DLIST HWSTATE PALETTE`                  |
 | State write/input  | `POKE POKE16 MEMDUMP MEMLOAD JOY KEY CONSOL BOOT MOUNT COLD_RESET WARM_RESET`  |
 | Save states        | `STATE_SAVE STATE_LOAD STATE_LIST STATE_DROP` (path / slot / inline modes; `bridge.checkpoint()` is a context manager that auto-rewinds) |
-| Rendering          | `SCREENSHOT RAWSCREEN RENDER_FRAME`                                            |
+| Rendering          | `SCREENSHOT RAWSCREEN RENDER_FRAME VIDEO_OUTPUTS` (`output=NAME` for device outputs, e.g. `maria`) |
 | Introspection      | `DISASM HISTORY EVAL CALLSTACK MEMMAP BANK_INFO CART_INFO PMG AUDIO_STATE`     |
 | Breakpoints        | `BP_SET BP_CLEAR BP_CLEAR_ALL BP_LIST WATCH_SET`                               |
 | Symbols            | `SYM_LOAD SYM_RESOLVE SYM_LOOKUP MEMSEARCH`                                    |

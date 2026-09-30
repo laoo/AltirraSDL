@@ -4,6 +4,8 @@
 // RAWSCREEN   — raw XRGB8888 (little-endian) snapshot of the last frame
 // RENDER_FRAME — alias for SCREENSHOT inline + dimensions (no state
 //                override yet; reserved for a later phase)
+// VIDEO_OUTPUTS — list device video outputs (MARIA, XEP80, ...) that
+//                SCREENSHOT/RAWSCREEN can capture with output=NAME
 //
 // All commands read from ATGTIAEmulator::GetLastFrameBuffer, which
 // returns the same pixmap the display pane reads. The headless
@@ -11,6 +13,8 @@
 // ui_stubs.cpp) because GTIA::BeginFrame bails out early when
 // mpDisplay is null and never populates mpLastFrame. With a null
 // display attached, every VBI stores a fresh frame we can capture.
+// Device video outputs are read from IATDeviceVideoOutput's frame
+// buffer, which the device maintains without any display attached.
 
 #pragma once
 
@@ -24,5 +28,6 @@ namespace ATBridge {
 std::string CmdScreenshot (ATSimulator& sim, const std::vector<std::string>& tokens);
 std::string CmdRawScreen  (ATSimulator& sim, const std::vector<std::string>& tokens);
 std::string CmdRenderFrame(ATSimulator& sim, const std::vector<std::string>& tokens);
+std::string CmdVideoOutputs(ATSimulator& sim, const std::vector<std::string>& tokens);
 
 }  // namespace ATBridge

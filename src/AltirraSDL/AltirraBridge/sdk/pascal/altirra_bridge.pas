@@ -302,8 +302,18 @@ type
       server's overscan / region setting and are NOT constant —
       callers must read Result.Width / Result.Height every time
       and (re)create any downstream texture when they change.
-      Mirrors atb_rawscreen_inline. }
-    function  RawScreen: TRawFrame;
+      Output selects the video output (RAWSCREEN output=): '' or
+      'computer' for the computer's GTIA frame, 'display' for the
+      output selected under View > Video Outputs, or a device output
+      name such as 'maria' or 'xep80' (see VideoOutputs).
+      Mirrors atb_rawscreen_inline / atb_rawscreen_output_inline. }
+    function  RawScreen(const Output: String = ''): TRawFrame;
+
+    { List the device video outputs usable as RawScreen's Output, as
+      raw JSON ("selected" plus an "outputs" array with name,
+      display_name, signal_valid, pass_through, width, height).
+      Mirrors atb_video_outputs. }
+    function  VideoOutputs: String;
 
     { Extract a flat "key":value field from any response string.
       Exposed so callers can pull fields out of the raw chip-state
@@ -1103,12 +1113,15 @@ begin
   CheckOk(Rpc('PALETTE_RESET'), 'PALETTE_RESET');
 end;
 
-function TAltirraBridge.RawScreen: TRawFrame;
+function TAltirraBridge.RawScreen(const Output: String): TRawFrame;
 var
-  Resp, B64: String;
+  Cmd, Resp, B64: String;
   Expect: Integer;
 begin
-  Resp := Rpc('RAWSCREEN inline=true');
+  Cmd := 'RAWSCREEN inline=true';
+  if Output <> '' then
+    Cmd := Cmd + ' output=' + Output;
+  Resp := Rpc(Cmd);
   CheckOk(Resp, 'RAWSCREEN');
   Result.Width  := GetIntField(Resp, 'width');
   Result.Height := GetIntField(Resp, 'height');
@@ -1123,6 +1136,12 @@ begin
     raise EBridgeError.CreateFmt(
       'RAWSCREEN: expected %d bytes, got %d',
       [Expect, System.Length(Result.Pixels)]);
+end;
+
+function TAltirraBridge.VideoOutputs: String;
+begin
+  Result := Rpc('VIDEO_OUTPUTS');
+  CheckOk(Result, 'VIDEO_OUTPUTS');
 end;
 
 end.

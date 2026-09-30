@@ -151,7 +151,9 @@ Detailed documentation lives in `PORTING/`:
   (buttons, checkboxes, menu items, etc.) with their labels, types, and
   positions each frame. Commands: `ping`, `query_state`, `list_items`,
   `open_dialog`/`close_dialog`, `click <window> <label>`, `wait_frames`,
-  `screenshot`, `boot_image`, `pause`/`resume`, `cold_reset`/`warm_reset`.
+  `screenshot <path> [display|computer|<output-name>]` (device video
+  outputs such as MARIA; see `list_video_outputs`), `boot_image`,
+  `pause`/`resume`, `cold_reset`/`warm_reset`.
   See `PORTING/BUILD.md` for full command reference.
   Files: `src/AltirraSDL/source/ui_testmode.h`, `ui_testmode.cpp`.
 

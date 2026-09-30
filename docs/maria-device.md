@@ -50,6 +50,26 @@ PDVS bit on load. `.maria` in the debugger dumps the full status
 (registers, window mapping, per-strip cycle usage of the last frame,
 model warnings).
 
+## Screenshots
+
+**Edit → Save Frame / Copy Frame** capture whatever the display area
+shows, as on Windows: the MARIA picture while View → Video Outputs →
+MARIA is selected, the computer picture otherwise.
+
+Harnesses can capture the MARIA output explicitly, whether or not it is
+the one on screen:
+
+| interface | request |
+|---|---|
+| `--test-mode` socket | `screenshot /tmp/maria.png maria` (also `computer`, `display`); `list_video_outputs` |
+| AltirraBridge | `SCREENSHOT path=/tmp/maria.png output=maria`, `RAWSCREEN inline=true output=maria`; `VIDEO_OUTPUTS` |
+| Python bridge SDK | `a.screenshot(path=..., output="maria")`, `a.rawscreen(output="maria")`, `a.video_outputs()` |
+| C bridge SDK | `atb_screenshot_output_path(c, "maria", path)`, `atb_screenshot_output_inline(...)`, `atb_rawscreen_output_inline(...)`, `atb_video_outputs(c)` |
+
+The MARIA capture is the 320×240 frame buffer converted through the CEL
+palette (pending palette writes are applied first). The bridge also
+works in the headless `AltirraBridgeServer`.
+
 ## Testing
 
 The hardware project's `out/apps/*.xex` programs run unmodified (they
